@@ -48,6 +48,8 @@ export { OPERATIVE_BODY_URL };
 
 /** Above this ground speed the locomotion set switches from walk to run. */
 const RUN_SPEED = 3.2;
+/** Extra playback speed for left/right sidestep clips. */
+const STRAFE_RATE_BOOST = 1.5;
 /** Below this, the character is standing still. */
 const IDLE_SPEED = 0.35;
 /**
@@ -141,6 +143,11 @@ export type OperativeMotion = {
   velocity: THREE.Vector3;
   /** Facing, radians. The velocity is resolved against this to pick a strafe. */
   yaw: number;
+  /**
+   * Sprint key held. When given, the no-gun set picks run vs walk from this instead of the
+   * speed threshold (normal on-foot speed sits above RUN_SPEED, so a plain walk read as a run).
+   */
+  sprinting?: boolean;
   crouched?: boolean;
   /**
    * Flat on the belly. Beats `crouched` (the arena already makes the two mutually exclusive)
@@ -246,8 +253,9 @@ export function locomotionClip(
     if (fists && Math.abs(side) > Math.abs(forward)) {
       return side >= 0 ? CLIP.strafeRightFists : CLIP.strafeLeftFists;
     }
-    if (forward < 0) return running ? CLIP.runBackwardUnarmed : CLIP.walkBackwardUnarmed;
-    if (running) return CLIP.runUnarmed;
+    const run = m.sprinting ?? running;
+    if (forward < 0) return run ? CLIP.runBackwardUnarmed : CLIP.walkBackwardUnarmed;
+    if (run) return CLIP.runUnarmed;
     return fists ? CLIP.walkForwardFists : CLIP.walkForwardUnarmed;
   }
 
@@ -558,7 +566,10 @@ export async function createOperativeRig(opts?: {
     const name = locomotionClip(m, forward, side, customIdle);
     const entry = lib.get(name) ?? lib.get(CLIP.idle);
     if (!entry) return;
-    const rate = rateFor(entry, speed);
+    // Sidesteps read sluggish at stride-matched rate; play them faster.
+    const sidestep = name === CLIP.walkLeft || name === CLIP.walkRight || name === CLIP.runLeft ||
+      name === CLIP.runRight || name === CLIP.strafeLeftFists || name === CLIP.strafeRightFists;
+    const rate = rateFor(entry, speed) * (sidestep ? STRAFE_RATE_BOOST : 1);
     // Longer fade into a stance than out of one: snapping to idle the frame movement
     // stops is the tell that gives away canned animation.
     const fade = entry.stationary ? 0.22 : 0.16;
