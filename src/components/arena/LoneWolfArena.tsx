@@ -4610,9 +4610,11 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
      * up with what the player sees — at a fraction of the triangle count.
      */
     let collisionRoot: THREE.Object3D | null = null;
+    let collisionReady: Promise<void> = Promise.resolve();
     const loadCollision = () =>
       new Promise<void>((resolve) => {
         if (!activeMap.collisionUrl) return resolve();
+        enableMeshoptWorkers();
         const cl = new GLTFLoader();
         cl.setMeshoptDecoder(MeshoptDecoder);
         cl.load(
@@ -4675,7 +4677,9 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
               requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
             }
           ).requestIdleCallback;
-          if (idle) idle(() => res(), { timeout: 120 });
+          // Hang Out sits behind a static splash: one painted frame is enough, no idle wait.
+          if (isSandbox(modeRulesRef.current)) window.setTimeout(res, 0);
+          else if (idle) idle(() => res(), { timeout: 120 });
           else window.setTimeout(res, 0);
         });
       });
@@ -4684,6 +4688,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
     const loadLevel = () => loader.load(
       activeMap.url,
       async (gltf) => {
+        await collisionReady;
         if (disposed) return;
         buildT0 = performance.now();
         const model = gltf.scene;
@@ -5783,9 +5788,11 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
       },
     );
 
-    void loadCollision().then(() => {
-      if (!disposed) loadLevel();
-    });
+    // Download + decode the collision proxy and the level IN PARALLEL (they used to run back to
+    // back, so the 18 MB level only started fetching after the proxy had fully parsed). The build
+    // itself still waits for the proxy, so collision is set up exactly as before.
+    collisionReady = loadCollision();
+    loadLevel();
 
     let raf = 0;
     let online: OnlineHangout | null = null;

@@ -48,7 +48,25 @@ export function sharedKtx2Loader(renderer?: THREE.WebGLRenderer): KTX2Loader | n
  * untextured. Cheap to call per load — the loader itself is a thin object, and the expensive part
  * (the transcoder and its workers) is the shared singleton above.
  */
+let meshoptWorkers = false;
+/**
+ * Move meshopt geometry decoding into a small worker pool, once per page. Without this every
+ * compressed buffer (the 18 MB Friend Island level, cars, bodies) is decoded on the main thread
+ * in one long task. Browser-only: the decoder spawns blob workers.
+ */
+export function enableMeshoptWorkers() {
+  if (meshoptWorkers || typeof window === "undefined" || typeof Worker === "undefined") return;
+  meshoptWorkers = true;
+  const n = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
+  try {
+    MeshoptDecoder.useWorkers(n);
+  } catch {
+    /* fall back to main-thread decoding */
+  }
+}
+
 export function makeGltfLoader(renderer?: THREE.WebGLRenderer): GLTFLoader {
+  enableMeshoptWorkers();
   const loader = new GLTFLoader();
   const ktx2 = sharedKtx2Loader(renderer);
   if (ktx2) loader.setKTX2Loader(ktx2);
