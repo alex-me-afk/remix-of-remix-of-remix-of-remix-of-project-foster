@@ -90,7 +90,7 @@ import { createImpactFx, type ImpactFx } from "./impactFx";
 import { ARENA_MAPS, type MapId } from "./maps";
 import { IslandMiniGames, type IslandGameMode, stopAllAudio as stopIslandAudio } from "./island/IslandMiniGames";
 import { nearestStation, createStationMarkers, ISLAND_STRAY_NODES } from "./island/stations";
-import { createBasketball, onCourt, type Basketball } from "./island/basketball";
+import { THROW_CLIP_RATE, createBasketball, onCourt, type Basketball } from "./island/basketball";
 import { type GameMode, type MatchType, MODE_RULES, type ModeRules, lossPayout, modeForMap } from "./modes";
 import { rankPointsForMatch, rankTierFromPoints } from "./ranks";
 import { createSkydiveDirector, PLANE_SCALE, type SkydiveDirector, type SkydivePhase } from "./skydive";
