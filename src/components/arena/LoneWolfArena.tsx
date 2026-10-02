@@ -226,6 +226,8 @@ import {
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 type Mode = "orbit" | "walk";
+/** Player speed multiplier when moving purely sideways. */
+const STRAFE_SPEED_MUL = 0.65;
 
 // PLAYER_RADIUS / EYE_HEIGHT / STEP_UP / gravity / jump / void-floor now live in
 // ./walkPhysics — the first three are re-imported above because the shooting,
@@ -6489,7 +6491,11 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
           const colliders = localColliders(walkPos);
 
           if (move.lengthSq() > 0) {
-            move.normalize().multiplyScalar(speed);
+            // Sideways movement is slower than forward/back: pure strafe 65%, diagonals 85%.
+            const fIn = (keys.has(binds.forward) || keys.has("ArrowUp") ? 1 : 0) - (keys.has(binds.back) || keys.has("ArrowDown") ? 1 : 0);
+            const sIn = (keys.has(binds.right) || keys.has("ArrowRight") ? 1 : 0) - (keys.has(binds.left) || keys.has("ArrowLeft") ? 1 : 0);
+            const sideMul = sIn === 0 ? 1 : fIn === 0 ? STRAFE_SPEED_MUL : 0.85;
+            move.normalize().multiplyScalar(speed * sideMul);
             moveHorizontal(walkPos, move, colliders, grounded);
           }
 
@@ -6678,7 +6684,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
         const moving = walkPos.distanceTo(hoopPrevPos) > 0.02 * Math.max(1, dt * 60);
         hoopPrevPos.copy(walkPos);
         camera.getWorldDirection(hoopCamDir);
-        hoops.update(dt, walkPos, hoopCamDir, moving);
+        hoops.update(dt, walkPos, hoopCamDir, moving, humanBody?.rig?.bone("RightHand") ?? null);
         const prompt = station
           ? station.kind === "arcade"
             ? "Play arcade (E)"
@@ -6853,6 +6859,10 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
               pistol: getWeapon(weaponRef.current)?.cls === "Pistol",
               blade: usesBladeStance(weaponRef.current),
               crouched: crouchRef.current,
+              sprinting:
+                settingsRef.current.sprintMode === "toggle"
+                  ? sprintToggleRef.current
+                  : keys.has(settingsRef.current.keybinds.sprint),
               // Knocked overrides the stance: the belly-down crawl is the downed state —
               // prone beats crouch in the rig, and `downed` swaps prone_forward for prone_crawl.
               prone: proneRef.current || !!human?.downed,
