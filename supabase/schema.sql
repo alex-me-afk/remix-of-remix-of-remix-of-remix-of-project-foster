@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS public.match_results (
   player_deaths INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+REVOKE ALL ON public.match_results FROM anon, authenticated;
 GRANT ALL ON public.match_results TO service_role;
 ALTER TABLE public.match_results ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS match_results_created_at_idx ON public.match_results (created_at DESC);
@@ -70,6 +71,7 @@ CREATE TABLE IF NOT EXISTS public.player_profiles (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+REVOKE ALL ON public.player_profiles FROM anon, authenticated;
 GRANT SELECT ON public.player_profiles TO authenticated;
 GRANT ALL ON public.player_profiles TO service_role;
 ALTER TABLE public.player_profiles ENABLE ROW LEVEL SECURITY;
