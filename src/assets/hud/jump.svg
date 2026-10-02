@@ -1,0 +1,13 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Jump Action Silhouette -->
+  <circle cx="50" cy="22" r="9" fill="white"/>
+  <!-- Torso & Arms -->
+  <path d="M 47 34 L 53 34 L 57 52 L 43 52 Z" fill="white"/>
+  <path d="M 46 36 L 30 26 L 26 32 L 42 42 Z" fill="white"/>
+  <path d="M 54 36 L 70 26 L 74 32 L 58 42 Z" fill="white"/>
+  <!-- Bent jumping legs -->
+  <path d="M 44 52 L 32 66 L 40 76 L 46 72 L 40 64 L 48 52 Z" fill="white"/>
+  <path d="M 56 52 L 68 66 L 60 76 L 54 72 L 60 64 L 52 52 Z" fill="white"/>
+  <!-- Ground jump blast curves -->
+  <path d="M 32 88 Q 50 82 68 88" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+</svg>

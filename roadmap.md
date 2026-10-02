@@ -1,0 +1,3 @@
+- [x] Enable Cloud + match_results table
+- [x] player_profiles table + cloud sync
+- [x] supabase/schema.sql kept in repo

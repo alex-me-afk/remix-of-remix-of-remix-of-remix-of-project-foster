@@ -1,0 +1,13 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Medical Inhaler / Stim -->
+  <rect x="36" y="16" width="28" height="44" rx="5" fill="white"/>
+  <path d="M 36 46 L 64 46 L 76 68 L 76 80 L 52 80 L 36 60 Z" fill="white"/>
+  <rect x="42" y="10" width="16" height="8" rx="2" fill="white" opacity="0.8"/>
+  <!-- Cross emblem -->
+  <path d="M 48 26 h 4 v 12 h -4 z" fill="#0f172a"/>
+  <path d="M 44 30 h 12 v 4 h -12 z" fill="#0f172a"/>
+  <!-- Spray burst -->
+  <circle cx="82" cy="74" r="3" fill="white" opacity="0.8"/>
+  <circle cx="88" cy="71" r="2" fill="white" opacity="0.6"/>
+  <circle cx="89" cy="78" r="2.5" fill="white" opacity="0.7"/>
+</svg>
