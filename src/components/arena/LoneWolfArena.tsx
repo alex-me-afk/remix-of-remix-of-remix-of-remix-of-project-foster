@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { acceleratedRaycast } from "three-mesh-bvh";
-import { makeGltfLoader, sharedKtx2Loader } from "./ktx2";
+import { enableMeshoptWorkers, makeGltfLoader, sharedKtx2Loader } from "./ktx2";
 import {
   buildMergedCollider,
   buildCollisionTiles,
@@ -4984,7 +4984,8 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
         // Radar footprint: sample every vertex of the level between knee and
         // roof height into a top-down occupancy grid. The GLB batches whole
         // areas into single meshes, so per-mesh bounds are useless here.
-        {
+        // In Hang Out it is deferred until after the player is in (nothing needs it to spawn).
+        const buildRadarGrid = () => {
           const RES = 128;
           const EXT = footprintOk
             ? Math.max(Math.abs(boundsMinX), Math.abs(boundsMaxX), Math.abs(boundsMinZ), Math.abs(boundsMaxZ))
@@ -5015,7 +5016,12 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
             }
           }
           mapGridRef.current = { cells, res: RES, extent: EXT };
-        }
+        };
+        if (isSandbox(modeRulesRef.current)) {
+          window.setTimeout(() => {
+            if (!disposed) buildRadarGrid();
+          }, 1500);
+        } else buildRadarGrid();
         await breathe("radar grid");
         if (disposed) return;
 
