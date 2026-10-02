@@ -1155,7 +1155,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
           hoopShots += 1;
           hoopMsg = "";
           // Full-body shot animation (authored long, so played faster).
-          humanBody?.rig?.play(CLIP.basketballThrow, { rate: 1.8 });
+          humanBody?.rig?.play(CLIP.basketballThrow, { rate: THROW_CLIP_RATE, fullBody: true });
         }
         return ok;
       },

@@ -17,6 +17,13 @@ const BOARD_Y = [2.5, 3.4] as const;
 const BALL_R = 0.12;
 const G = 9.81;
 // Court area where the ball can be picked up.
+/**
+ * Seconds after release() until the ball leaves the hand. The throw clip (3.83 s authored,
+ * played at THROW_CLIP_RATE) lets go of the ball around this point; the ball rides the right
+ * hand until then so the animation and the flight line up.
+ */
+export const THROW_CLIP_RATE = 1.8;
+const THROW_RELEASE_DELAY = (3.83 * 0.42) / THROW_CLIP_RATE;
 const COURT = { minX: -4, maxX: 21, minZ: 190, maxZ: 199.5 };
 
 export function onCourt(x: number, z: number) {
@@ -133,6 +140,9 @@ export function createBasketball(scene: THREE.Scene, onEvent: (e: HoopEvent) => 
   const launchP = new THREE.Vector3();
   const launchV = new THREE.Vector3();
   let floorY = 0;
+  /** >0 while the throw animation winds up; the ball is launched when it reaches 0. */
+  let windup = 0;
+  const handP = new THREE.Vector3();
 
   const computeLaunch = (feet: THREE.Vector3, camDir: THREE.Vector3) => {
     const flat = new THREE.Vector3(camDir.x, 0, camDir.z);
@@ -184,15 +194,16 @@ export function createBasketball(scene: THREE.Scene, onEvent: (e: HoopEvent) => 
       return canShoot;
     },
     get inFlight() {
-      return !!flight;
+      return !!flight || windup > 0;
     },
     setHolding(h: boolean) {
       holding = h;
       charging = false;
+      if (!h) windup = 0;
       if (!h && !flight) ball.visible = false;
     },
     startCharge() {
-      if (!holding || flight || !canShoot) return false;
+      if (!holding || flight || windup > 0 || !canShoot) return false;
       charging = true;
       power = 0;
       chargeDir = 1;
@@ -202,11 +213,28 @@ export function createBasketball(scene: THREE.Scene, onEvent: (e: HoopEvent) => 
       if (!charging) return false;
       charging = false;
       if (!canShoot) return false;
-      flight = { p: launchP.clone(), v: launchV.clone(), floorY, scored: false, prevY: launchP.y, t: 0, bounced: false };
+      // Freeze the aimed launch now; the ball leaves the hand when the clip reaches release.
+      windup = THROW_RELEASE_DELAY;
+      preview.visible = false;
       return true;
     },
-    update(dt: number, feet: THREE.Vector3, camDir: THREE.Vector3, moving: boolean) {
+    update(dt: number, feet: THREE.Vector3, camDir: THREE.Vector3, moving: boolean, hand?: THREE.Object3D | null) {
       floorY = feet.y;
+      const hasHand = !!hand && !!hand.parent;
+      if (hasHand) hand!.getWorldPosition(handP);
+      if (windup > 0) {
+        windup -= dt;
+        ball.visible = true;
+        if (hasHand) ball.position.copy(handP);
+        else ball.position.copy(launchP);
+        if (windup <= 0) {
+          windup = 0;
+          // Launch from where the hand actually is, keeping the aimed velocity.
+          const p = ball.position.clone();
+          flight = { p, v: launchV.clone(), floorY, scored: false, prevY: p.y, t: 0, bounced: false };
+        }
+        return;
+      }
       canShoot = holding && !moving && !flight;
       if (charging) {
         power += chargeDir * dt * 0.9;
@@ -243,7 +271,9 @@ export function createBasketball(scene: THREE.Scene, onEvent: (e: HoopEvent) => 
       if (!charging && power === 0) power = 0.45; // show a default arc before charging
       computeLaunch(feet, camDir);
       ball.visible = true;
-      ball.position.copy(launchP);
+      // Ball sits in the right hand while held; aim arc still starts at the release point.
+      if (hasHand) ball.position.copy(handP);
+      else ball.position.copy(launchP);
       preview.visible = canShoot;
       if (canShoot) updatePreview();
       if (!charging && power === 0.45) power = 0.45;
