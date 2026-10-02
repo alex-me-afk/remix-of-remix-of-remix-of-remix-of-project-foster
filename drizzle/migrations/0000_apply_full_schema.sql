@@ -1,11 +1,3 @@
--- =====================================================================
--- Ironhowl — full database schema
--- Run this whole file once on a fresh Postgres/Supabase database to
--- create every table the game needs. Kept up to date whenever a table
--- is added or changed.
--- =====================================================================
-
--- Shared helper: keeps updated_at current on every update.
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -14,10 +6,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SET search_path = public;
 
--- ---------------------------------------------------------------------
--- match_results: one row per finished match (feeds the leaderboard).
--- Server-only: written and read by the game server.
--- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.match_results (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   blue_score INTEGER NOT NULL DEFAULT 0,
@@ -33,10 +21,6 @@ GRANT ALL ON public.match_results TO service_role;
 ALTER TABLE public.match_results ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS match_results_created_at_idx ON public.match_results (created_at DESC);
 
--- ---------------------------------------------------------------------
--- player_profiles: each signed-in player's saved progress.
--- Players may READ their own row; only the game server writes.
--- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.player_profiles (
   user_id UUID PRIMARY KEY,
   name TEXT NOT NULL DEFAULT 'Player',
@@ -83,6 +67,5 @@ CREATE TRIGGER update_player_profiles_updated_at
   BEFORE UPDATE ON public.player_profiles
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
--- Upgrade path for databases created before onboarding existed.
 ALTER TABLE public.player_profiles ADD COLUMN IF NOT EXISTS onboarded BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE public.player_profiles ADD COLUMN IF NOT EXISTS owned_characters TEXT[] NOT NULL DEFAULT '{}';

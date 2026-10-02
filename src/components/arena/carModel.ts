@@ -32,7 +32,7 @@ import * as THREE from "three";
 import { makeGltfLoader } from "./ktx2";
 
 /** Uniform in-game size multiplier for every car (1.5 = 150% of real-world size). */
-export const CAR_SIZE = 1.5;
+export const CAR_SIZE = 1.2;
 
 export const CAR_CORNERS = ["FL", "FR", "BL", "BR"] as const;
 export type CarCorner = (typeof CAR_CORNERS)[number];
