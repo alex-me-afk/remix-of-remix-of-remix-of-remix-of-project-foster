@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { acceleratedRaycast } from "three-mesh-bvh";
-import { makeGltfLoader, sharedKtx2Loader } from "./ktx2";
+import { enableMeshoptWorkers, makeGltfLoader, sharedKtx2Loader } from "./ktx2";
 import {
   buildMergedCollider,
   buildCollisionTiles,
@@ -4610,9 +4610,11 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
      * up with what the player sees — at a fraction of the triangle count.
      */
     let collisionRoot: THREE.Object3D | null = null;
+    let collisionReady: Promise<void> = Promise.resolve();
     const loadCollision = () =>
       new Promise<void>((resolve) => {
         if (!activeMap.collisionUrl) return resolve();
+        enableMeshoptWorkers();
         const cl = new GLTFLoader();
         cl.setMeshoptDecoder(MeshoptDecoder);
         cl.load(
@@ -4675,7 +4677,9 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
               requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
             }
           ).requestIdleCallback;
-          if (idle) idle(() => res(), { timeout: 120 });
+          // Hang Out sits behind a static splash: one painted frame is enough, no idle wait.
+          if (isSandbox(modeRulesRef.current)) window.setTimeout(res, 0);
+          else if (idle) idle(() => res(), { timeout: 120 });
           else window.setTimeout(res, 0);
         });
       });
@@ -4684,6 +4688,7 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
     const loadLevel = () => loader.load(
       activeMap.url,
       async (gltf) => {
+        await collisionReady;
         if (disposed) return;
         buildT0 = performance.now();
         const model = gltf.scene;
@@ -4979,7 +4984,8 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
         // Radar footprint: sample every vertex of the level between knee and
         // roof height into a top-down occupancy grid. The GLB batches whole
         // areas into single meshes, so per-mesh bounds are useless here.
-        {
+        // In Hang Out it is deferred until after the player is in (nothing needs it to spawn).
+        const buildRadarGrid = () => {
           const RES = 128;
           const EXT = footprintOk
             ? Math.max(Math.abs(boundsMinX), Math.abs(boundsMaxX), Math.abs(boundsMinZ), Math.abs(boundsMaxZ))
@@ -5010,7 +5016,12 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
             }
           }
           mapGridRef.current = { cells, res: RES, extent: EXT };
-        }
+        };
+        if (isSandbox(modeRulesRef.current)) {
+          window.setTimeout(() => {
+            if (!disposed) buildRadarGrid();
+          }, 1500);
+        } else buildRadarGrid();
         await breathe("radar grid");
         if (disposed) return;
 
@@ -5783,9 +5794,11 @@ export default function LoneWolfArena({ onReady, onExit, mapId = "frostline", ga
       },
     );
 
-    void loadCollision().then(() => {
-      if (!disposed) loadLevel();
-    });
+    // Download + decode the collision proxy and the level IN PARALLEL (they used to run back to
+    // back, so the 18 MB level only started fetching after the proxy had fully parsed). The build
+    // itself still waits for the proxy, so collision is set up exactly as before.
+    collisionReady = loadCollision();
+    loadLevel();
 
     let raf = 0;
     let online: OnlineHangout | null = null;
